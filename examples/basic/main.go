@@ -7,7 +7,7 @@ import (
 	"log"
 	"time"
 
-	lemicraft "github.com/mrirbis/lemicraft-go"
+	lemicraft "github.com/Mr1rbis/lemicraft-go"
 )
 
 func main() {

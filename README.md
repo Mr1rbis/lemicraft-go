@@ -18,7 +18,7 @@ Go-клиент для [Lemicraft API](https://lemicraft.ru). Библиотек
 ## Установка
 
 ```bash
-go get github.com/mrirbis/lemicraft-go
+go get github.com/Mr1rbis/lemicraft-go
 ```
 
 Требуется **Go 1.21+**.
@@ -35,7 +35,7 @@ import (
     "fmt"
     "log"
 
-    lemicraft "github.com/mrirbis/lemicraft-go"
+    lemicraft "github.com/Mr1rbis/lemicraft-go"
 )
 
 func main() {
@@ -206,7 +206,7 @@ Sentinel-ошибка для HTTP 404. Проверяется через `errors
 ## Структура проекта
 
 ```
-github.com/mrirbis/lemicraft-go
+github.com/Mr1rbis/lemicraft-go
 ├── go.mod
 ├── README.md
 ├── client.go            # Client, New(), центральный метод do()
