@@ -1,8 +1,10 @@
 package lemicraft
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 )
 
@@ -32,16 +34,16 @@ var ErrNotFound = errors.New("lemicraft: not found")
 
 // PlayerShort contains basic player info (from /api/players)
 type PlayerShort struct {
-	Name      string  `json:"name"`
-	UUID      *string `json:"uuid"`
-	ServiceID int     `json:"serviceId"` // 0=Mojang, 1=Ely.by
-	Banned    bool    `json:"banned"`
+	Name      string    `json:"name"`
+	UUID      UUIDValue `json:"uuid"`
+	ServiceID int       `json:"serviceId"` // 0=Mojang, 1=Ely.by
+	Banned    bool      `json:"banned"`
 }
 
 // PlayerFull contains detailed player info (from /api/players/{nick})
 type PlayerFull struct {
 	Name         string     `json:"name"`
-	UUID         *string    `json:"uuid"`
+	UUID         UUIDValue  `json:"uuid"`
 	ServiceID    int        `json:"serviceId"`
 	Banned       bool       `json:"banned"`
 	BanReason    *string    `json:"banReason"`
@@ -51,20 +53,60 @@ type PlayerFull struct {
 	SkinURL      string     `json:"skinUrl"`
 }
 
+// APITime parses timestamps that may come either as RFC3339 string
+// or as unix milliseconds (number).
+type APITime struct {
+	time.Time
+}
+
+func (t *APITime) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" {
+		return nil
+	}
+
+	// Try numeric timestamp first (unix milliseconds)
+	var num json.Number
+	if err := json.Unmarshal(data, &num); err == nil {
+		f, err := strconv.ParseFloat(num.String(), 64)
+		if err == nil {
+			ms := int64(f)
+			t.Time = time.UnixMilli(ms)
+			return nil
+		}
+	}
+
+	// Fallback to string timestamp (RFC3339 / RFC3339Nano)
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return fmt.Errorf("unsupported time format: %s", string(data))
+	}
+
+	if ts, err := time.Parse(time.RFC3339Nano, s); err == nil {
+		t.Time = ts
+		return nil
+	}
+	if ts, err := time.Parse(time.RFC3339, s); err == nil {
+		t.Time = ts
+		return nil
+	}
+
+	return fmt.Errorf("invalid time value: %q", s)
+}
+
 // PlayerPlan contains player statistics from Plan plugin
 type PlayerPlan struct {
-	Registered     *time.Time `json:"registered"`
-	LastSeen       *time.Time `json:"lastSeen"`
-	Online         bool       `json:"online"`
-	Playtime       *int64     `json:"playtime"`       // milliseconds
-	ActivePlaytime *int64     `json:"activePlaytime"` // milliseconds
-	PlaytimeStr    string     `json:"playtimeStr"`
-	Sessions       *int       `json:"sessions"`
-	LongestSession *int64     `json:"longestSession"` // milliseconds
-	Deaths         *int       `json:"deaths"`
-	MobKills       *int       `json:"mobKills"`
-	PlayerKills    *int       `json:"playerKills"`
-	Ping           *float64   `json:"ping"`
+	Registered     *APITime `json:"registered"`
+	LastSeen       *APITime `json:"lastSeen"`
+	Online         bool     `json:"online"`
+	Playtime       *int64   `json:"playtime"`       // milliseconds
+	ActivePlaytime *int64   `json:"activePlaytime"` // milliseconds
+	PlaytimeStr    string   `json:"playtimeStr"`
+	Sessions       *int     `json:"sessions"`
+	LongestSession *int64   `json:"longestSession"` // milliseconds
+	Deaths         *int     `json:"deaths"`
+	MobKills       *int     `json:"mobKills"`
+	PlayerKills    *int     `json:"playerKills"`
+	Ping           *float64 `json:"ping"`
 }
 
 // PlayersListResponse is the response from GET /api/players
@@ -237,4 +279,44 @@ type CourtMessage struct {
 // CourtMessagesResponse is the response from GET /api/court/messages/{id}
 type CourtMessagesResponse struct {
 	Messages []CourtMessage `json:"messages"`
+}
+
+// UUIDValue is a tolerant UUID field parser used by LemiCraft responses.
+// Some API responses may return uuid as string, null, or an object.
+type UUIDValue string
+
+func (u UUIDValue) String() string {
+	return string(u)
+}
+
+func (u *UUIDValue) UnmarshalJSON(data []byte) error {
+	var v any
+	if err := json.Unmarshal(data, &v); err != nil {
+		return err
+	}
+
+	s := extractUUIDString(v)
+	*u = UUIDValue(s)
+	return nil
+}
+
+func extractUUIDString(v any) string {
+	switch t := v.(type) {
+	case nil:
+		return ""
+	case string:
+		return t
+	case map[string]any:
+		for _, key := range []string{"uuid", "value", "id", "hex", "raw"} {
+			if nested, ok := t[key]; ok {
+				if s := extractUUIDString(nested); s != "" {
+					return s
+				}
+			}
+		}
+		b, _ := json.Marshal(t)
+		return string(b)
+	default:
+		return fmt.Sprint(t)
+	}
 }

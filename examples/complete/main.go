@@ -10,6 +10,8 @@ import (
 	lemicraft "github.com/Mr1rbis/lemicraft-go"
 )
 
+const exampleNick = "MrIrbis"
+
 func main() {
 	tokenFlag := flag.String("token", "", "Lemicraft API token (from https://lemicraft.ru/settings)")
 	flag.Parse()
@@ -167,11 +169,11 @@ func exampleGetPlayerProfile(ctx context.Context, client *lemicraft.Client) {
 	fmt.Println("\n📍 Пример 3: Получить профиль игрока")
 	fmt.Println("   GET /api/players/{nick}")
 
-	player, err := client.Players.GetByNick(ctx, "Notch")
+	player, err := client.Players.GetByNick(ctx, exampleNick)
 	if err != nil {
 		// Это нормально если игрока нет - он может не существовать
 		if errors.Is(err, lemicraft.ErrNotFound) {
-			fmt.Println("   ✗ Игрок не найден (404)")
+			fmt.Printf("   ✗ Игрок %s не найден (404)\n", exampleNick)
 		} else {
 			printError(err)
 		}
@@ -192,10 +194,10 @@ func exampleGetPlayerStats(ctx context.Context, client *lemicraft.Client) {
 	fmt.Println("\n📍 Пример 4: Получить статистику игрока (Plan)")
 	fmt.Println("   GET /api/plan/{nick}")
 
-	plan, err := client.Players.GetPlan(ctx, "Notch")
+	plan, err := client.Players.GetPlan(ctx, exampleNick)
 	if err != nil {
 		if errors.Is(err, lemicraft.ErrNotFound) {
-			fmt.Println("   ✗ Статистика не найдена (игрок может быть неактивен)")
+			fmt.Printf("   ✗ Статистика для %s не найдена (игрок может быть неактивен)\n", exampleNick)
 		} else {
 			printError(err)
 		}
@@ -223,7 +225,7 @@ func exampleDownloadAvatar(ctx context.Context, client *lemicraft.Client) {
 	fmt.Println("\n📍 Пример 5: Скачать аватар игрока")
 	fmt.Println("   GET /api/avatar/{nick}")
 
-	avatar, err := client.Players.GetAvatar(ctx, "Notch")
+	avatar, err := client.Players.GetAvatar(ctx, exampleNick)
 	if err != nil {
 		printError(err)
 		return
@@ -238,7 +240,7 @@ func exampleDownloadSkin(ctx context.Context, client *lemicraft.Client) {
 	fmt.Println("\n📍 Пример 6: Скачать скин игрока")
 	fmt.Println("   GET /api/skin/{nick}")
 
-	skin, err := client.Players.GetSkin(ctx, "Notch")
+	skin, err := client.Players.GetSkin(ctx, exampleNick)
 	if err != nil {
 		printError(err)
 		return

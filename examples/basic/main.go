@@ -11,6 +11,8 @@ import (
 	lemicraft "github.com/Mr1rbis/lemicraft-go"
 )
 
+const exampleNick = "MrIrbis"
+
 func main() {
 	// Get API token from command line or environment
 	tokenFlag := flag.String("token", "", "Lemicraft API token (from https://lemicraft.ru/settings)")
@@ -47,7 +49,7 @@ func main() {
 
 	// ── Example 2: Get specific player ──────────────────────────────────────
 	fmt.Println("\n=== Player Profile ===")
-	playerProfile, err := client.Players.GetByNick(ctx, "Notch")
+	playerProfile, err := client.Players.GetByNick(ctx, exampleNick)
 	if err != nil {
 		fmt.Printf("Note: %v (expected if player doesn't exist)\n", err)
 	} else {
