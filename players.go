@@ -65,7 +65,7 @@ func (s *PlayersService) GetByNick(ctx context.Context, nick string) (*PlayerFul
 
 // GetByDiscord retrieves detailed information about a player based on their Discord ID.
 //
-// GET /api/players/{nick}
+// GET /api/users/discord/{discordid}
 func (s *PlayersService) GetByDiscord(ctx context.Context, discordid string) (*PlayerByDiscordId, error) {
 	endpoint := fmt.Sprintf("%s/users/discord/%s", s.client.baseURL, url.PathEscape(discordid))
 
