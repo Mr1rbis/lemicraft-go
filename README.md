@@ -1,295 +1,387 @@
-# LemicraftGo
-
-Go-клиент для [Lemicraft API](https://lemicraft.ru). Библиотека спроектирована с чётким разделением ответственности, поддержкой авторизации одним вызовом и лёгким добавлением новых эндпоинтов.
-
-## Содержание
-
-- [Установка](#установка)
-- [Быстрый старт](#быстрый-старт)
-- [Конфигурация клиента](#конфигурация-клиента)
-- [Авторизация](#авторизация)
-- [Обработка ошибок](#обработка-ошибок)
-- [API Reference](#api-reference)
-- [Структура проекта](#структура-проекта)
-- [Расширение библиотеки](#расширение-библиотеки)
-
----
-
-## Установка
-
+# LemiCraft Go Library
+![Go Version](https://img.shields.io/badge/Go-1.21%2B-blue)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+Официальная Go-библиотека для работы с [LemiCraft API](https://lemicraft.ru/api-reference).
+## 📦 Установка
 ```bash
 go get github.com/Mr1rbis/lemicraft-go
 ```
-
 Требуется **Go 1.21+**.
-
----
-
-## Быстрый старт
-
+## 🚀 Быстрый старт
 ```go
 package main
-
 import (
     "context"
-    "fmt"
     "log"
-
     lemicraft "github.com/Mr1rbis/lemicraft-go"
 )
-
 func main() {
-    client := lemicraft.New()
-
+    // Получите API токен на https://lemicraft.ru/settings
+    client := lemicraft.New("your-api-token")
     ctx := context.Background()
-
-    user, err := client.Users.GetByDiscordID(ctx, "535868441433735188")
+    // Получить список игроков
+    players, err := client.Players.List(ctx, nil)
     if err != nil {
         log.Fatal(err)
     }
-
-    fmt.Println(user.MinecraftNick) // DaPoT22
+    log.Printf("Total players: %d\n", players.Total)
 }
 ```
-
----
-
-## Конфигурация клиента
-
-Клиент создаётся через `lemicraft.New()` с функциональными опциями:
-
+## 🔐 Авторизация
+API токен **обязателен** для использования библиотеки.
+Получить токен можно в [личном кабинете](https://lemicraft.ru/settings).
 ```go
-import "net/http"
-
-client := lemicraft.New(
-    // Кастомный базовый URL (например, staging-окружение)
+// Создание клиента с токеном
+client := lemicraft.New("your-api-token")
+// Опционально: кастомизация базового URL (для тестирования)
+client := lemicraft.New("token", 
     lemicraft.WithBaseURL("https://staging.lemicraft.ru/api"),
-
-    // Свой http.Client — для настройки таймаутов, TLS и т.д.
-    lemicraft.WithHTTPClient(&http.Client{
-        Timeout: 10 * time.Second,
-    }),
-
-    // Bearer-токен авторизации (см. раздел ниже)
-    lemicraft.WithAuthToken("your-token-here"),
+)
+// Опционально: кастомный HTTP клиент с таймаутом
+import "net/http"
+import "time"
+customHTTPClient := &http.Client{
+    Timeout: 15 * time.Second,
+}
+client := lemicraft.New("token",
+    lemicraft.WithHTTPClient(customHTTPClient),
 )
 ```
-
-Опции можно комбинировать в любом порядке. Без опций клиент использует `https://lemicraft.ru/api` и стандартный `http.Client`.
-
----
-
-## Авторизация
-
-Авторизация подключается **одной опцией** и автоматически применяется ко **всем** текущим и будущим эндпоинтам:
-
+## 📚 API Эндпоинты
+### Игроки (Players)
+#### Получить список игроков
 ```go
-client := lemicraft.New(
-    lemicraft.WithAuthToken("your-api-token"),
-)
+// Получить всех игроков
+players, err := client.Players.List(ctx, nil)
+// С поиском по нику
+search := "Steve"
+players, err := client.Players.List(ctx, &lemicraft.ListOptions{
+    Search: &search,
+})
+// Использование
+for _, p := range players.Players {
+    log.Printf("%s (UUID: %v, Banned: %v)\n", p.Name, p.UUID, p.Banned)
+}
 ```
-
-Токен передаётся через HTTP-заголовок `Authorization: Bearer <token>` на уровне транспорта (`http.RoundTripper`), что гарантирует его присутствие в каждом запросе без изменения кода сервисов.
-
----
-
-## Обработка ошибок
-
-Библиотека возвращает два вида ошибок:
-
-| Тип | Когда возникает | Как проверить |
-|-----|----------------|---------------|
-| `*lemicraft.APIError` | Сервер вернул не-2xx статус | `errors.As(err, &apiErr)` |
-| `lemicraft.ErrNotFound` | Сервер вернул 404 | `errors.Is(err, lemicraft.ErrNotFound)` |
-| `error` (стандартный) | Сетевая ошибка, таймаут | `err != nil` |
-
-### Пример полной обработки
-
+#### Получить профиль игрока
 ```go
-user, err := client.Users.GetByDiscordID(ctx, discordID)
+player, err := client.Players.GetByNick(ctx, "Notch")
 if err != nil {
-    // 404 — пользователь не найден
+    log.Fatal(err)
+}
+log.Printf("Ник: %s\n", player.Name)
+log.Printf("Забанен: %v\n", player.Banned)
+log.Printf("Аватар: %s\n", player.AvatarURL)
+log.Printf("Скин: %s\n", player.SkinURL)
+```
+#### Получить статистику игрока (Plan)
+```go
+plan, err := client.Players.GetPlan(ctx, "Notch")
+if err != nil {
+    log.Fatal(err)
+}
+log.Printf("Онлайн: %v\n", plan.Online)
+log.Printf("Время игры: %s\n", plan.PlaytimeStr)
+log.Printf("Сессии: %d\n", *plan.Sessions)
+log.Printf("Убийства мобов: %d\n", *plan.MobKills)
+```
+#### Скачать аватар и скин
+```go
+// Скачать аватар (128x128 PNG)
+avatar, err := client.Players.GetAvatar(ctx, "Notch")
+if err != nil {
+    log.Fatal(err)
+}
+ioutil.WriteFile("avatar.png", avatar, 0644)
+// Скачать скин (64x64 PNG)
+skin, err := client.Players.GetSkin(ctx, "Notch")
+if err != nil {
+    log.Fatal(err)
+}
+ioutil.WriteFile("skin.png", skin, 0644)
+```
+### Лаунчер (Launcher) - Публичные эндпоинты
+Эти эндпоинты **не требуют** авторизации.
+#### Версия лаунчера
+```go
+version, err := client.Launcher.GetVersion(ctx)
+if err != nil {
+    log.Fatal(err)
+}
+log.Printf("Последняя версия: %s\n", version.Version)
+log.Printf("Скачать: %s\n", version.DownloadURL)
+log.Printf("Размер: %d MB\n", version.FileSize / 1024 / 1024)
+log.Printf("Дата: %s\n", version.ReleaseDate.Format("2006-01-02"))
+```
+#### Версия модпака
+```go
+modpack, err := client.Launcher.GetModpackVersion(ctx)
+if err != nil {
+    log.Fatal(err)
+}
+log.Printf("Модпак: %s\n", modpack.Name)
+log.Printf("Версия: %s\n", modpack.Version)
+log.Printf("Скачать: %s\n", modpack.DownloadURL)
+```
+#### Новости для лаунчера
+```go
+// Получить последние новости
+news, err := client.Launcher.GetNews(ctx, nil)
+// С параметрами
+limit := 20
+category := "update"
+news, err := client.Launcher.GetNews(ctx, &lemicraft.NewsOptions{
+    Limit:    &limit,
+    Category: &category,
+})
+for _, item := range news.Items {
+    log.Printf("[%s] %s - %s\n", item.Category, item.Title, item.AuthorName)
+}
+```
+### Контент (News/Content)
+#### Новости сайта
+```go
+// Получить первую страницу новостей
+news, err := client.News.GetNews(ctx, nil)
+if err != nil {
+    log.Fatal(err)
+}
+// Пагинация
+for _, item := range news.Items {
+    log.Printf("HTML: %s\n", item.HTML)
+    log.Printf("Автор: %s\n", item.AuthorName)
+}
+// Получить следующую страницу
+if news.HasMore && news.LastID != nil {
+    nextNews, err := client.News.GetNews(ctx, news.LastID)
+}
+```
+#### Галерея
+```go
+gallery, err := client.News.GetGallery(ctx)
+if err != nil {
+    log.Fatal(err)
+}
+for _, img := range gallery.Images {
+    log.Printf("ID: %d, Файл: %s, URL: %s\n", img.ID, img.Filename, img.URL)
+}
+```
+#### Посты сообщества
+```go
+// Получить список постов (с первыми 3 комментариями в каждом)
+posts, err := client.News.GetPosts(ctx, nil)
+if err != nil {
+    log.Fatal(err)
+}
+// Пагинация
+for posts.HasMore && posts.LastID != nil {
+    posts, err = client.News.GetPosts(ctx, &lemicraft.PostsOptions{
+        Before: posts.LastID,
+    })
+    if err != nil {
+        break
+    }
+}
+// Получить один пост со ВСЕМИ комментариями
+post, err := client.News.GetPost(ctx, 42)
+if err != nil {
+    log.Fatal(err)
+}
+log.Printf("Автор: %s\n", post.AuthorName)
+log.Printf("Текст: %s\n", post.Text)
+log.Printf("Лайков: %d, Дизлайков: %d\n", post.VotesFor, post.VotesAgainst)
+for _, comment := range post.Comments {
+    log.Printf("  %s: %s\n", comment.AuthorName, comment.Text)
+}
+```
+### Сообщество (Community)
+#### Петиции
+```go
+// Получить активные петиции (по умолчанию)
+petitions, err := client.Petitions.List(ctx, nil)
+// Фильтр по статусу
+status := "closed"
+petitions, err := client.Petitions.List(ctx, &lemicraft.PetitionsListOptions{
+    Status: &status,
+})
+for _, p := range petitions.Petitions {
+    log.Printf("Заголовок: %s\n", p.Title)
+    log.Printf("Автор: %s\n", p.Author)
+    log.Printf("За: %d, Против: %d\n", p.VotesFor, p.VotesAgainst)
+    log.Printf("Статус: %s\n", p.Status)
+}
+```
+#### Судебные дела
+```go
+// Получить все открытые дела
+cases, err := client.Court.List(ctx, nil)
+log.Printf("Дел: %d\n", len(cases.Cases))
+// Получить конкретное дело
+courtCase, err := client.Court.Get(ctx, 1)
+if err != nil {
+    log.Fatal(err)
+}
+log.Printf("Название: %s\n", courtCase.Title)
+log.Printf("Обвиняемый: %s\n", courtCase.Defendant)
+log.Printf("Истец: %s\n", courtCase.Author)
+log.Printf("Статус: %s\n", courtCase.Status)
+// Получить все аргументы сторон в деле
+messages, err := client.Court.GetMessages(ctx, 1)
+if err != nil {
+    log.Fatal(err)
+}
+for _, msg := range messages.Messages {
+    log.Printf("%s (%s): %s\n", msg.Author, msg.CreatedAt.Format("2006-01-02"), msg.Message)
+}
+```
+## ⚠️ Обработка ошибок
+### Типичные ошибки API
+```go
+import "errors"
+user, err := client.Players.GetByNick(ctx, "NonExistentPlayer")
+if err != nil {
+    // Проверка конкретной ошибки "не найдено"
     if errors.Is(err, lemicraft.ErrNotFound) {
-        fmt.Println("пользователь не найден")
+        log.Println("Игрок не найден (404)")
         return
     }
-
-    // Любая другая HTTP-ошибка — достаём код и тело ответа
+    // Проверка любой ошибки API
     var apiErr *lemicraft.APIError
     if errors.As(err, &apiErr) {
-        switch {
-        case apiErr.StatusCode == 401:
-            fmt.Println("не авторизован — передайте токен через WithAuthToken")
-        case apiErr.StatusCode == 403:
-            fmt.Println("доступ запрещён")
-        case apiErr.StatusCode >= 500:
-            fmt.Printf("ошибка сервера (%d): %s\n", apiErr.StatusCode, apiErr.Message)
+        switch apiErr.StatusCode {
+        case 400:
+            log.Printf("Неправильный запрос: %s\n", apiErr.Message)
+        case 401:
+            log.Fatal("Не авторизован - проверьте токен")
+        case 403:
+            log.Fatal("Доступ запрещён")
+        case 429:
+            log.Fatal("Слишком много запросов - попробуйте позже")
+        case 500, 502, 503, 504:
+            log.Printf("Ошибка сервера (%d): %s\n", apiErr.StatusCode, apiErr.Message)
         default:
-            fmt.Printf("API error (%d): %s\n", apiErr.StatusCode, apiErr.Message)
+            log.Printf("Ошибка API (%d): %s\n", apiErr.StatusCode, apiErr.Message)
         }
         return
     }
-
-    // Сетевая ошибка / таймаут
-    fmt.Printf("ошибка запроса: %v\n", err)
-    return
+    // Сетевые ошибки, таймауты и прочее
+    log.Printf("Ошибка запроса: %v\n", err)
 }
 ```
-
-> **Примечание:** `errors.Is(err, lemicraft.ErrNotFound)` работает автоматически благодаря методу `(*APIError).Is()` — отдельно проверять `StatusCode == 404` не нужно.
-
----
-
-## API Reference
-
-### `lemicraft.New(opts ...Option) *Client`
-
-Создаёт новый клиент. Принимает опциональные настройки.
-
----
-
-### `client.Users` — `*UsersService`
-
-#### `GetByDiscordID(ctx context.Context, discordID string) (*UserByDiscord, error)`
-
-Возвращает пользователя Lemicraft по его Discord ID.
-
-```
-GET https://lemicraft.ru/api/users/discord/<discordID>
-```
-
-**Параметры:**
-
-| Параметр | Тип | Описание |
-|----------|-----|----------|
-| `ctx` | `context.Context` | Контекст для отмены/таймаута запроса |
-| `discordID` | `string` | Discord snowflake ID пользователя |
-
-**Возвращает:** `*UserByDiscord`, `error`
-
----
-
-### Типы
-
-#### `UserByDiscord`
-
+## 📊 Структура типов данных
+### Players
 ```go
-type UserByDiscord struct {
-    DiscordID       string // Discord snowflake ID
-    DiscordUsername string // Имя пользователя в Discord
-    MinecraftNick   string // Ник в Minecraft
-    MinecraftUUID   string // UUID Minecraft-аккаунта
-    Whitelisted     bool   // Находится ли в вайтлисте сервера
-    NickSource      string // Источник ника (например, "multilogin")
+type PlayerShort struct {
+    Name      string  // Ник игрока
+    UUID      *string // UUID или nil
+    ServiceID int     // 0 = Mojang, 1 = Ely.by
+    Banned    bool    // Забанен ли
+}
+type PlayerFull struct {
+    Name        string    // Ник
+    UUID        *string   // UUID
+    ServiceID   int       // Сервис авторизации
+    Banned      bool      // Забанен
+    BanReason   *string   // Причина бана
+    BanPermanent bool    // Перманентный ли бан
+    BanEndsAt   *time.Time // Когда закончится бан
+    AvatarURL   string    // URL аватара
+    SkinURL     string    // URL скина
+}
+type PlayerPlan struct {
+    Registered     *time.Time // Первый вход
+    LastSeen       *time.Time // Последний визит
+    Online         bool       // Онлайн ли сейчас
+    Playtime       *int64     // Общее время в мс
+    ActivePlaytime *int64     // Активное время в мс (без AFK)
+    PlaytimeStr    string     // Время в читаемом формате
+    Sessions       *int       // Количество сессий
+    LongestSession *int64     // Самая долгая сессия в мс
+    Deaths         *int       // Смертей
+    MobKills       *int       // Убийств мобов
+    PlayerKills    *int       // Убийств игроков
+    Ping           *float64   // Средний пинг
 }
 ```
-
-#### `APIError`
-
+### Posts
 ```go
-type APIError struct {
-    StatusCode int    // HTTP-статус код
-    Message    string // Тело ответа от сервера
+type Post struct {
+    ID              int
+    AuthorDiscordID string
+    AuthorName      string
+    Text            string
+    Edited          bool
+    CreatedAt       time.Time
+    Media           []string  // URLs к изображениям
+    VotesFor        int       // Лайки
+    VotesAgainst    int       // Дизлайки
+    UserVote        *int      // Ваш голос (1, -1, или nil)
+    Comments        []Comment
+    CommentCount    int
 }
 ```
-
-#### `ErrNotFound`
-
+## 🎯 Best Practices
+### 1. Используйте контекст с таймаутом
 ```go
-var ErrNotFound = errors.New("lemicraft: not found")
+ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+defer cancel()
+players, err := client.Players.List(ctx, nil)
 ```
-
-Sentinel-ошибка для HTTP 404. Проверяется через `errors.Is`.
-
----
-
-## Структура проекта
-
-```
-github.com/Mr1rbis/lemicraft-go
-├── go.mod
-├── README.md
-├── client.go            # Client, New(), центральный метод do()
-├── options.go           # Функциональные опции (WithAuthToken, WithBaseURL, WithHTTPClient)
-├── transport.go         # authTransport — инъекция авторизации на уровне RoundTripper
-├── types.go             # Типы данных и ошибок (UserByDiscord, APIError, ErrNotFound)
-├── users.go             # UsersService — эндпоинты /api/users/*
-└── examples/
-    └── basic/
-        └── main.go      # Пример использования (go run ./examples/basic/)
-```
-
----
-
-## Расширение библиотеки
-
-### Добавить новый эндпоинт в существующий ресурс
-
-Достаточно добавить метод в соответствующий сервис. Например, `GetByMinecraftUUID` в `users.go`:
-
+### 2. Переиспользуйте клиент
 ```go
-func (s *UsersService) GetByMinecraftUUID(ctx context.Context, uuid string) (*UserByMinecraft, error) {
-    url := fmt.Sprintf("%s/users/minecraft/%s", s.client.baseURL, uuid)
-    req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-    if err != nil {
-        return nil, fmt.Errorf("lemicraft: building request: %w", err)
-    }
-    req.Header.Set("Accept", "application/json")
-    var user UserByMinecraft
-    if err := s.client.do(req, &user); err != nil {
-        return nil, err
-    }
-    return &user, nil
+// ✅ Правильно - один клиент для всех запросов
+client := lemicraft.New("token")
+players, _ := client.Players.List(ctx, nil)
+news, _ := client.News.GetNews(ctx, nil)
+cases, _ := client.Court.List(ctx, nil)
+// ❌ Неправильно - не создавайте новый клиент каждый раз
+for i := 0; i < 100; i++ {
+    client := lemicraft.New("token") // ❌ Плохо!
 }
 ```
-
-### Добавить новый ресурс (например, серверы)
-
-**1.** Создать файл `servers.go` в корне модуля:
-
+### 3. Проверяйте ошибки правильно
 ```go
-package lemicraft
-
-import (
-    "context"
-    "fmt"
-    "net/http"
-)
-
-type ServersService struct {
-    client *Client
-}
-
-func (s *ServersService) List(ctx context.Context) ([]Server, error) {
-    req, err := http.NewRequestWithContext(ctx, http.MethodGet, s.client.baseURL+"/servers", nil)
-    if err != nil {
-        return nil, fmt.Errorf("lemicraft: building request: %w", err)
-    }
-    req.Header.Set("Accept", "application/json")
-    var servers []Server
-    if err := s.client.do(req, &servers); err != nil {
-        return nil, err
-    }
-    return servers, nil
-}
-```
-
-**2.** Добавить поле в `Client` и инициализировать в `New()` в `client.go`:
-
-```go
-type Client struct {
+// ✅ Правильно
+if errors.Is(err, lemicraft.ErrNotFound) {
     // ...
-    Users   *UsersService
-    Servers *ServersService  // новый сервис
 }
-
-func New(opts ...Option) *Client {
+var apiErr *lemicraft.APIError
+if errors.As(err, &apiErr) {
     // ...
-    c.Users   = &UsersService{client: c}
-    c.Servers = &ServersService{client: c}  // инициализация
-    return c
+}
+// ❌ Неправильно - не сравнивайте строки
+if err != nil && strings.Contains(err.Error(), "404") {
+    // Плохой способ проверки
 }
 ```
-
-Авторизация, таймауты и базовый URL применяются автоматически — менять ничего не нужно.
-
+### 4. Пагинация
+```go
+// Получить первую страницу
+posts, err := client.News.GetPosts(ctx, nil)
+if err != nil {
+    log.Fatal(err)
+}
+// Пока есть еще страницы
+for posts.HasMore && posts.LastID != nil {
+    posts, err = client.News.GetPosts(ctx, &lemicraft.PostsOptions{
+        Before: posts.LastID,
+    })
+    if err != nil {
+        break
+    }
+}
+```
+## 📊 Лимиты и квоты
+- **Без авторизации** (только публичные эндпоинты типа `/launcher/*`): 60 запросов/мин по IP
+- **С авторизацией**: 300 запросов/мин по API ключу
+## 🤝 Вклад
+Приветствуются пул-реквесты и issue репорты на GitHub.
+## 📄 Лицензия
+MIT License - см. LICENSE файл
+## 🔗 Ссылки
+- [LemiCraft Website](https://lemicraft.ru)
+- [API Reference](https://lemicraft.ru/api-reference)
+- [Settings (API Keys)](https://lemicraft.ru/settings)
+---
+**Последнее обновление:** 2025-01-15  
+**Версия API:** 1.0

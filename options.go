@@ -16,29 +16,9 @@ func WithBaseURL(url string) Option {
 }
 
 // WithHTTPClient replaces the default http.Client.
-// Use this to set timeouts, a custom TLS config, or a pre-configured client.
+// Use this to set timeouts, custom TLS config, or a pre-configured client.
 func WithHTTPClient(hc *http.Client) Option {
 	return func(c *Client) {
 		c.httpClient = hc
-	}
-}
-
-// WithAuthToken enables Bearer-token authentication on every request.
-// The token is injected via authTransport, so adding auth to the client
-// automatically covers all existing and future endpoints without any
-// per-endpoint changes.
-func WithAuthToken(token string) Option {
-	return func(c *Client) {
-		base := c.httpClient.Transport
-		if base == nil {
-			base = http.DefaultTransport
-		}
-		c.httpClient = &http.Client{
-			Transport: &authTransport{
-				token:     token,
-				transport: base,
-			},
-			Timeout: c.httpClient.Timeout,
-		}
 	}
 }
