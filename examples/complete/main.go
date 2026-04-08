@@ -11,6 +11,7 @@ import (
 )
 
 const exampleNick = "MrIrbis"
+const exampleDiscordid = "363220369869504512"
 
 func main() {
 	tokenFlag := flag.String("token", "", "Lemicraft API token (from https://lemicraft.ru/settings)")
@@ -43,13 +44,16 @@ func main() {
 	// 3. Get player profile
 	exampleGetPlayerProfile(ctx, client)
 
-	// 4. Get player statistics
+	// 4. Get user by discordID
+	exampleGetPlayerByDiscordId(ctx, client)
+
+	// 5. Get player statistics
 	exampleGetPlayerStats(ctx, client)
 
-	// 5. Download avatar
+	// 6. Download avatar
 	exampleDownloadAvatar(ctx, client)
 
-	// 6. Download skin
+	// 7. Download skin
 	exampleDownloadSkin(ctx, client)
 
 	// ────────────────────────────────────────────────────────────────────────
@@ -60,13 +64,13 @@ func main() {
 	fmt.Println("🚀 LAUNCHER SERVICE (публичные эндпоинты)")
 	fmt.Println("=" + stringRepeat("=", 69))
 
-	// 7. Get launcher version
+	// 8. Get launcher version
 	exampleGetLauncherVersion(ctx, client)
 
-	// 8. Get modpack version
+	// 9. Get modpack version
 	exampleGetModpackVersion(ctx, client)
 
-	// 9. Get launcher news
+	// 10. Get launcher news
 	exampleGetLauncherNews(ctx, client)
 
 	// ────────────────────────────────────────────────────────────────────────
@@ -77,16 +81,16 @@ func main() {
 	fmt.Println("📰 NEWS SERVICE")
 	fmt.Println("=" + stringRepeat("=", 69))
 
-	// 10. Get site news
+	// 11. Get site news
 	exampleGetSiteNews(ctx, client)
 
-	// 11. Get gallery
+	// 12. Get gallery
 	exampleGetGallery(ctx, client)
 
-	// 12. Get posts
+	// 13. Get posts
 	exampleGetPosts(ctx, client)
 
-	// 13. Get single post
+	// 14. Get single post
 	exampleGetSinglePost(ctx, client)
 
 	// ────────────────────────────────────────────────────────────────────────
@@ -97,7 +101,7 @@ func main() {
 	fmt.Println("✋ PETITIONS SERVICE")
 	fmt.Println("=" + stringRepeat("=", 69))
 
-	// 14. Get petitions
+	// 15. Get petitions
 	exampleGetPetitions(ctx, client)
 
 	// ────────────────────────────────────────────────────────────────────────
@@ -108,13 +112,13 @@ func main() {
 	fmt.Println("⚖️  COURT SERVICE")
 	fmt.Println("=" + stringRepeat("=", 69))
 
-	// 15. Get court cases
+	// 16. Get court cases
 	exampleGetCourtCases(ctx, client)
 
-	// 16. Get court case
+	// 17. Get court case
 	exampleGetCourtCase(ctx, client)
 
-	// 17. Get court messages
+	// 18. Get court messages
 	exampleGetCourtMessages(ctx, client)
 
 	fmt.Println("\n✅ Все примеры завершены!")
@@ -190,8 +194,32 @@ func exampleGetPlayerProfile(ctx context.Context, client *lemicraft.Client) {
 	fmt.Printf("   - Скин: %s\n", player.SkinURL)
 }
 
+func exampleGetPlayerByDiscordId(ctx context.Context, client *lemicraft.Client) {
+	fmt.Println("\n📍 Пример 4: Получить профиль игрока")
+	fmt.Println("   GET /api/users/discord/{discordid}")
+
+	player, err := client.Players.GetByDiscord(ctx, exampleDiscordid)
+	if err != nil {
+		// Это нормально если игрока нет - он может не существовать
+		if errors.Is(err, lemicraft.ErrNotFound) {
+			fmt.Printf("   ✗ Игрок %s не найден (404)\n", exampleDiscordid)
+		} else {
+			printError(err)
+		}
+		return
+	}
+
+	fmt.Printf("   ✓ DiscordID: %s\n", player.DiscordId)
+	fmt.Printf("   - Nick: %v\n", player.MinecraftNick)
+	fmt.Printf("   - DiscordUsername: %v\n", player.DiscordUsername)
+	fmt.Printf("   - UUID: %s\n", player.MinecraftUuid)
+	fmt.Printf("   - Nick source: %s\n", player.NickSource)
+	fmt.Printf("   - В вайтлисте: %v\n", player.Whitelisted)
+
+}
+
 func exampleGetPlayerStats(ctx context.Context, client *lemicraft.Client) {
-	fmt.Println("\n📍 Пример 4: Получить статистику игрока (Plan)")
+	fmt.Println("\n📍 Пример 5: Получить статистику игрока (Plan)")
 	fmt.Println("   GET /api/plan/{nick}")
 
 	plan, err := client.Players.GetPlan(ctx, exampleNick)
@@ -222,7 +250,7 @@ func exampleGetPlayerStats(ctx context.Context, client *lemicraft.Client) {
 }
 
 func exampleDownloadAvatar(ctx context.Context, client *lemicraft.Client) {
-	fmt.Println("\n📍 Пример 5: Скачать аватар игрока")
+	fmt.Println("\n📍 Пример 6: Скачать аватар игрока")
 	fmt.Println("   GET /api/avatar/{nick}")
 
 	avatar, err := client.Players.GetAvatar(ctx, exampleNick)
@@ -237,7 +265,7 @@ func exampleDownloadAvatar(ctx context.Context, client *lemicraft.Client) {
 }
 
 func exampleDownloadSkin(ctx context.Context, client *lemicraft.Client) {
-	fmt.Println("\n📍 Пример 6: Скачать скин игрока")
+	fmt.Println("\n📍 Пример 7: Скачать скин игрока")
 	fmt.Println("   GET /api/skin/{nick}")
 
 	skin, err := client.Players.GetSkin(ctx, exampleNick)
@@ -256,7 +284,7 @@ func exampleDownloadSkin(ctx context.Context, client *lemicraft.Client) {
 // ============================================================================
 
 func exampleGetLauncherVersion(ctx context.Context, client *lemicraft.Client) {
-	fmt.Println("\n📍 Пример 7: Получить версию лаунчера")
+	fmt.Println("\n📍 Пример 8: Получить версию лаунчера")
 	fmt.Println("   GET /api/launcher/version (публичный)")
 
 	version, err := client.Launcher.GetVersion(ctx)
@@ -273,7 +301,7 @@ func exampleGetLauncherVersion(ctx context.Context, client *lemicraft.Client) {
 }
 
 func exampleGetModpackVersion(ctx context.Context, client *lemicraft.Client) {
-	fmt.Println("\n📍 Пример 8: Получить версию модпака")
+	fmt.Println("\n📍 Пример 9: Получить версию модпака")
 	fmt.Println("   GET /api/launcher/modpack/version (публичный)")
 
 	modpack, err := client.Launcher.GetModpackVersion(ctx)
@@ -289,7 +317,7 @@ func exampleGetModpackVersion(ctx context.Context, client *lemicraft.Client) {
 }
 
 func exampleGetLauncherNews(ctx context.Context, client *lemicraft.Client) {
-	fmt.Println("\n📍 Пример 9: Получить новости для лаунчера")
+	fmt.Println("\n📍 Пример 10: Получить новости для лаунчера")
 	fmt.Println("   GET /api/launcher/news?limit=10&category=update (публичный)")
 
 	limit := 10
@@ -318,7 +346,7 @@ func exampleGetLauncherNews(ctx context.Context, client *lemicraft.Client) {
 // ============================================================================
 
 func exampleGetSiteNews(ctx context.Context, client *lemicraft.Client) {
-	fmt.Println("\n📍 Пример 10: Получить новости сайта")
+	fmt.Println("\n📍 Пример 11: Получить новости сайта")
 	fmt.Println("   GET /api/news")
 
 	news, err := client.News.GetNews(ctx, nil)
@@ -340,7 +368,7 @@ func exampleGetSiteNews(ctx context.Context, client *lemicraft.Client) {
 }
 
 func exampleGetGallery(ctx context.Context, client *lemicraft.Client) {
-	fmt.Println("\n📍 Пример 11: Получить галерею")
+	fmt.Println("\n📍 Пример 12: Получить галерею")
 	fmt.Println("   GET /api/gallery")
 
 	gallery, err := client.News.GetGallery(ctx)
@@ -360,7 +388,7 @@ func exampleGetGallery(ctx context.Context, client *lemicraft.Client) {
 }
 
 func exampleGetPosts(ctx context.Context, client *lemicraft.Client) {
-	fmt.Println("\n📍 Пример 12: Получить посты")
+	fmt.Println("\n📍 Пример 13: Получить посты")
 	fmt.Println("   GET /api/posts")
 
 	posts, err := client.News.GetPosts(ctx, nil)
@@ -381,7 +409,7 @@ func exampleGetPosts(ctx context.Context, client *lemicraft.Client) {
 }
 
 func exampleGetSinglePost(ctx context.Context, client *lemicraft.Client) {
-	fmt.Println("\n📍 Пример 13: Получить один пост со всеми комментариями")
+	fmt.Println("\n📍 Пример 14: Получить один пост со всеми комментариями")
 	fmt.Println("   GET /api/posts/{id}")
 
 	// Сначала получим ID поста из списка
@@ -420,7 +448,7 @@ func exampleGetSinglePost(ctx context.Context, client *lemicraft.Client) {
 // ============================================================================
 
 func exampleGetPetitions(ctx context.Context, client *lemicraft.Client) {
-	fmt.Println("\n📍 Пример 14: Получить петиции")
+	fmt.Println("\n📍 Пример 15: Получить петиции")
 	fmt.Println("   GET /api/petitions?status=active")
 
 	petitions, err := client.Petitions.List(ctx, nil)
@@ -457,7 +485,7 @@ func exampleGetPetitions(ctx context.Context, client *lemicraft.Client) {
 // ============================================================================
 
 func exampleGetCourtCases(ctx context.Context, client *lemicraft.Client) {
-	fmt.Println("\n📍 Пример 15: Получить все судебные дела")
+	fmt.Println("\n📍 Пример 16: Получить все судебные дела")
 	fmt.Println("   GET /api/court")
 
 	cases, err := client.Court.List(ctx, nil)
@@ -478,7 +506,7 @@ func exampleGetCourtCases(ctx context.Context, client *lemicraft.Client) {
 }
 
 func exampleGetCourtCase(ctx context.Context, client *lemicraft.Client) {
-	fmt.Println("\n📍 Пример 16: Получить конкретное судебное дело")
+	fmt.Println("\n📍 Пример 17: Получить конкретное судебное дело")
 	fmt.Println("   GET /api/court/{id}")
 
 	// Сначала получим ID из списка
@@ -512,7 +540,7 @@ func exampleGetCourtCase(ctx context.Context, client *lemicraft.Client) {
 }
 
 func exampleGetCourtMessages(ctx context.Context, client *lemicraft.Client) {
-	fmt.Println("\n📍 Пример 17: Получить сообщения (аргументы) в судебном деле")
+	fmt.Println("\n📍 Пример 18: Получить сообщения (аргументы) в судебном деле")
 	fmt.Println("   GET /api/court/messages/{id}")
 
 	// Сначала получим ID из списка

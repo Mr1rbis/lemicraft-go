@@ -63,6 +63,25 @@ func (s *PlayersService) GetByNick(ctx context.Context, nick string) (*PlayerFul
 	return &player, nil
 }
 
+// GetByDiscord retrieves detailed information about a player based on their Discord ID.
+//
+// GET /api/players/{nick}
+func (s *PlayersService) GetByDiscord(ctx context.Context, discordid string) (*PlayerByDiscordId, error) {
+	endpoint := fmt.Sprintf("%s/users/discord/%s", s.client.baseURL, url.PathEscape(discordid))
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	if err != nil {
+		return nil, fmt.Errorf("lemicraft: building request: %w", err)
+	}
+
+	var player PlayerByDiscordId
+	if err := s.client.do(req, &player); err != nil {
+		return nil, err
+	}
+
+	return &player, nil
+}
+
 // GetPlan fetches player statistics from the Plan plugin.
 //
 // GET /api/plan/{nick}
@@ -131,7 +150,9 @@ func (s *PlayersService) GetSkin(ctx context.Context, nick string) ([]byte, erro
 	if err != nil {
 		return nil, fmt.Errorf("lemicraft: http request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		return nil, &APIError{

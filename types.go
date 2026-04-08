@@ -53,6 +53,16 @@ type PlayerFull struct {
 	SkinURL      string     `json:"skinUrl"`
 }
 
+// PlayerByDiscordId contains detailed player info (from /api/users/discord/{discordid})
+type PlayerByDiscordId struct {
+	DiscordId       string `json:"discord_id"`
+	DiscordUsername string `json:"discord_username"`
+	MinecraftNick   string `json:"minecraft_nick"`
+	MinecraftUuid   string `json:"minecraft_uuid"`
+	Whitelisted     bool   `json:"whitelisted"`
+	NickSource      string `json:"nick_source"`
+}
+
 // APITime parses timestamps that may come either as RFC3339 string
 // or as unix milliseconds (number).
 type APITime struct {
